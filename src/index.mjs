@@ -75,6 +75,28 @@ app.post('/api/users', (req, res) => {
   return res.status(201).send(newUser);
 })
 
+// PUT requests - to update or replace an entire resource
+app.put('/api/users/:id', (req, res) => {
+  const {
+    body,
+    params: { id }
+  } = req;
+  // string to numeric conversion
+  const parsedId = parseInt(id);
+  if(isNaN(parsedId)) return res.status(400).send({msg: 'Bad Request! Invalid Id'});
+
+  // findIndex() returns the index of the first element that passes the condition
+  const findUserIndex = mockUsers.findIndex(
+    (user) => user.id === parsedId
+  )
+
+  if(findUserIndex === -1) return res.status(404).send({msg: 'User not found'});
+  
+  mockUsers[findUserIndex] = { id: parsedId, ...body };
+
+  return res.status(200).send(mockUsers[findUserIndex]);
+})
+// PATCH request - to apply partial modifications to a resource
 app.listen(PORT, () =>{
     console.log(`Server is running on port ${PORT}`);
 })
