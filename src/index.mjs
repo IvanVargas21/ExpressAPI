@@ -32,8 +32,18 @@ app.get('/', (req, res) => {
 
 // Basic GET reqs and res 
 app.get('/api/users', (req, res) => {
-  res.send(mockUsers)
+    console.log(req.query);
+    const { 
+        query: { filter, value } 
+    } = req;
+
+    if(filter && value) return res.send(
+        mockUsers.filter((user) => user[filter].includes(value))
+    )
+
+    return res.send(mockUsers)
 })
+
 app.get('/api/products', (req, res) =>{
   res.send(mockProducts)
 })
@@ -52,18 +62,10 @@ app.get('/api/users/:id', (req, res) => {
   res.send(user);
 })
 
-// Query Params
-app.get('/api/params/users', (req, res) => {
-    console.log(req.query);
-    const { 
-        query: { filter, value } 
-    } = req;
-
-    if(filter && value) return res.send(
-        mockUsers.filter((user) => user[filter].includes(value))
-    )
-
-    return res.send(mockUsers)
+// POST request
+app.post('/api/users', (req, res) => {
+  console.log(req.body);
+  return response.send(200)
 })
 
 app.listen(PORT, () =>{
