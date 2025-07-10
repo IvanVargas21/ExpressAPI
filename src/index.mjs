@@ -1,6 +1,10 @@
 import express from 'express';
 
 const app = express();
+
+// Middleware
+// parses incoming JSON reqs and puts the parsed data in req.body
+app.use(express.json())
 const PORT = process.env.PORT || 3000;
 
 // Route Params - /api/users/:id
@@ -65,7 +69,10 @@ app.get('/api/users/:id', (req, res) => {
 // POST request
 app.post('/api/users', (req, res) => {
   console.log(req.body);
-  return response.send(200)
+  const { body } = req;
+  const newUser = { id: mockUsers[mockUsers.length - 1].id + 1, ...body}
+  mockUsers.push(newUser);
+  return res.status(201).send(newUser);
 })
 
 app.listen(PORT, () =>{
