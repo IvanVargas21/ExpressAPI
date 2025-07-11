@@ -73,6 +73,7 @@ export const putUserValidationSchema = {
   }
 }
 
+// PATCH  http://localhost:3000/api/users/:id
 export const patchUserValidationSchema = {
     username: {
     in: ['body'],
