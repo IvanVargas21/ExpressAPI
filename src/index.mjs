@@ -1,12 +1,24 @@
 import express from 'express';
+import { 
+    query, 
+    validationResult, 
+    body,
+    matchedData,
+    checkSchema
+} from 'express-validator';
+import { 
+    createUserValidationSchema, getUserByValueAndFilterValidationSchema,
+    putUserValidationSchema,
+    patchUserValidationSchema
+} from './utils/validationSchemas.mjs';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middlewares
 const loggingMiddleware = (req, res, next) => {
-  console.log(`${req.method} - ${req.url}`);
-  next(); // continues to route handlers
+    console.log(`${req.method} - ${req.url}`);
+    next(); // continues to route handlers
 }
 const resolveIndexByUserId = (req, res, next) => {
     const {
@@ -28,8 +40,8 @@ const resolveIndexByUserId = (req, res, next) => {
 // parses incoming JSON reqs and puts the parsed data in req.body
 app.use(express.json())
 app.use(loggingMiddleware, (req, res, next) =>{
-  console.log('Finished Logging...');
-  next(); // continues to route handlers
+    console.log('Finished Logging...');
+    next(); // continues to route handlers
 });
 
 // Route Params - /api/users/:id
@@ -54,14 +66,21 @@ const mockProducts = [
 
 app.get('/', (req, res) => {
     res.status(201).send({
-      message: 'Welcome Ivan Vargas',
-      status: 'success'
+        message: 'Welcome Ivan Vargas',
+        status: 'success'
     });
 })
 
 // Basic GET reqs and res 
-app.get('/api/users', loggingMiddleware, (req, res) => {
-    console.log(req.query);
+app.get(
+    '/api/users',
+    checkSchema(getUserByValueAndFilterValidationSchema), 
+    loggingMiddleware, 
+    (req, res) => {
+    console.log(req['express-validator#contexts']);
+    const result = validationResult(req);
+    console.log(result);
+
     const { 
         query: { filter, value } 
     } = req;
@@ -74,52 +93,78 @@ app.get('/api/users', loggingMiddleware, (req, res) => {
 })
 
 app.get('/api/products', (req, res) =>{
-  res.send(mockProducts)
+    res.send(mockProducts)
 })
 
 // Route Params
 app.get('/api/users/:id', resolveIndexByUserId, (req, res) => { 
-  const { findUserIndex } = req;
-  const findUser = mockUsers[findUserIndex];
-  if(!findUser) return res.status(404).send({msg: 'User not found'});
-  res.send(findUser);
+    const { findUserIndex } = req;
+    const findUser = mockUsers[findUserIndex];
+    if(!findUser) return res.status(404).send({msg: 'User not found'});
+    res.send(findUser);
 })
 
 // POST request
-app.post('/api/users', (req, res) => {
-  console.log(req.body);
-  const { body } = req;
-  const newUser = { id: mockUsers[mockUsers.length - 1].id + 1, ...body}
-  mockUsers.push(newUser);
-  return res.status(201).send(newUser);
-})
+app.post(
+    '/api/users',
+    checkSchema(createUserValidationSchema),
+    (req, res) => {    
+        console.log(req.body);
+        const result = validationResult(req);
+        console.log(result);
+
+        if(!result.isEmpty())
+            return res.status(400).send({ errors: result.array() });
+
+        const data = matchedData(req);
+        const newUser = { id: mockUsers[mockUsers.length - 1].id + 1, ...data}
+        mockUsers.push(newUser);
+        return res.status(201).send(newUser);
+    }
+)
 
 // PUT requests - to update or replace an entire resource
-app.put('/api/users/:id', resolveIndexByUserId, (req, res) => {
-  const { body, findUserIndex} = req;
+app.put('/api/users/:id',
+    checkSchema(putUserValidationSchema),
+    resolveIndexByUserId, 
+    (req, res) => {
+    const result = validationResult(req);
+    if(!result.isEmpty()){
+        console.log(result);
+        return res.status(400).send({ errors: result.array() });
+    }
+    const { body, findUserIndex} = req;
 
-  mockUsers[findUserIndex] = { id: mockUsers[findUserIndex].id, ...body };
-  return res.status(200).send(mockUsers[findUserIndex]);
+    mockUsers[findUserIndex] = { id: mockUsers[findUserIndex].id, ...body };
+    return res.status(200).send(mockUsers[findUserIndex]);
 })
 
 
 // PATCH request - to apply partial modifications to a resource
-app.patch('/api/users/:id', resolveIndexByUserId, (req, res) => {
-  const { body, findUserIndex } = req;
-  mockUsers[findUserIndex] = {
-    ...mockUsers[findUserIndex],
-    ...body
-  };
-  return res.status(200).send(mockUsers[findUserIndex]);
+app.patch('/api/users/:id',
+    checkSchema(patchUserValidationSchema),
+    resolveIndexByUserId, 
+    (req, res) => {
+    const result = validationResult(req);
+    if(!result.isEmpty()) {
+        console.log(result);
+        return res.status(400).send({ errors: result.array()})
+    }
+    const { body, findUserIndex } = req;
+    mockUsers[findUserIndex] = {
+        ...mockUsers[findUserIndex],
+        ...body
+    };
+    return res.status(200).send(mockUsers[findUserIndex]);
 })
 
 app.delete('/api/users/:id', resolveIndexByUserId, (req, res) => {
-  const { findUserIndex } = req;
-  const deletedUser = mockUsers[findUserIndex];
-  // splice(start, deleteCount, item1, ite2, ...)
-  mockUsers.splice(findUserIndex, 1);
+    const { findUserIndex } = req;
+    const deletedUser = mockUsers[findUserIndex];
+    // splice(start, deleteCount, item1, ite2, ...)
+    mockUsers.splice(findUserIndex, 1);
 
-  res.status(200).send({ msg: `User ${deletedUser.displayName} deleted successfully` });
+    res.status(200).send({ msg: `User ${deletedUser.displayName} deleted successfully` });
 })
 
 app.listen(PORT, () =>{
